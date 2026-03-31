@@ -1,36 +1,5 @@
 import { NextResponse } from "next/server";
-import { readFile, writeFile, mkdir } from "fs/promises";
-import path from "path";
-
-export interface ChannelGroup {
-  name: string;
-  channels: string[];
-}
-
-interface GroupsData {
-  groups: ChannelGroup[];
-}
-
-const DATA_DIR = path.join(process.cwd(), "data");
-const CHANNELS_FILE = path.join(DATA_DIR, "channels.default.json");
-
-async function ensureDataDir() {
-  await mkdir(DATA_DIR, { recursive: true });
-}
-
-async function readGroups(): Promise<GroupsData> {
-  try {
-    const data = await readFile(CHANNELS_FILE, "utf-8");
-    return JSON.parse(data);
-  } catch {
-    return { groups: [] };
-  }
-}
-
-async function writeGroups(data: GroupsData) {
-  await ensureDataDir();
-  await writeFile(CHANNELS_FILE, JSON.stringify(data, null, 2), "utf-8");
-}
+import { readGroups, writeGroups } from "./store";
 
 function normalize(handle: string): string {
   return handle.startsWith("@") ? handle : `@${handle}`;
