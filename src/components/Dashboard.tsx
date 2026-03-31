@@ -45,6 +45,9 @@ export default function Dashboard() {
   const [renamingGroup, setRenamingGroup] = useState<string | null>(null);
   const [renameValue, setRenameValue] = useState("");
 
+  // Search state for manage tab
+  const [groupSearch, setGroupSearch] = useState("");
+
   const allHandles = groups.flatMap((g) => g.channels);
 
   useEffect(() => {
@@ -54,9 +57,11 @@ export default function Dashboard() {
         const res = await fetch("/api/channels");
         const data = await res.json();
         if (!cancelled) {
-          setGroups(data.groups ?? []);
-          if ((data.groups ?? []).length > 0) {
-            setTargetGroup(data.groups[0].name);
+          const loadedGroups = data.groups ?? [];
+          setGroups(loadedGroups);
+          setSelectedGroups(new Set(loadedGroups.map((g: ChannelGroup) => g.name)));
+          if (loadedGroups.length > 0) {
+            setTargetGroup(loadedGroups[0].name);
           }
         }
       } catch {
@@ -293,7 +298,7 @@ export default function Dashboard() {
               : "text-neutral-500 hover:text-neutral-300"
           }`}
         >
-          Manage Channels
+          Channels & Groups
         </button>
       </div>
 
@@ -324,6 +329,17 @@ export default function Dashboard() {
               <p className="text-xs text-neutral-600">Maximum 5 groups reached</p>
             )}
 
+            {/* Search */}
+            <div className="flex gap-3">
+              <input
+                type="text"
+                value={groupSearch}
+                onChange={(e) => setGroupSearch(e.target.value)}
+                placeholder="Search groups or channels..."
+                className="flex-1 bg-neutral-900 border border-neutral-700 rounded-lg px-4 py-2.5 text-sm focus:outline-none focus:border-red-500 transition-colors"
+              />
+            </div>
+
             {/* Groups list */}
             {groups.length === 0 ? (
               <p className="text-neutral-500 text-sm py-8 text-center">
@@ -331,7 +347,14 @@ export default function Dashboard() {
               </p>
             ) : (
               <div className="space-y-6">
-                {groups.map((group) => (
+                {groups
+                  .filter((group) =>
+                    group.name.toLowerCase().includes(groupSearch.toLowerCase()) ||
+                    group.channels.some((ch) =>
+                      ch.toLowerCase().includes(groupSearch.toLowerCase())
+                    )
+                  )
+                  .map((group) => (
                   <div
                     key={group.name}
                     className="bg-neutral-900 border border-neutral-800 rounded-lg overflow-hidden"
