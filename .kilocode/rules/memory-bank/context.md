@@ -19,6 +19,9 @@ The application is a YouTube tracker dashboard that monitors recent videos from 
 - [x] API route for fetching YouTube videos via RSS feeds
 - [x] Sorting by date and channel name
 - [x] next/image integration for YouTube thumbnails
+- [x] Error handling fix for client-side exception in channels fetch
+- [x] error.tsx error boundary for graceful error recovery
+- [x] Preset channels support via data/channels.default.json
 
 ## Current Structure
 
@@ -27,16 +30,18 @@ The application is a YouTube tracker dashboard that monitors recent videos from 
 | `src/app/page.tsx` | Home page (renders Dashboard) | ✅ Ready |
 | `src/app/layout.tsx` | Root layout | ✅ Ready |
 | `src/app/globals.css` | Global styles | ✅ Ready |
+| `src/app/error.tsx` | Error boundary | ✅ Ready |
 | `src/app/api/channels/route.ts` | Channel list CRUD API | ✅ Ready |
 | `src/app/api/youtube/route.ts` | YouTube video fetch API | ✅ Ready |
 | `src/components/Dashboard.tsx` | Main dashboard component | ✅ Ready |
-| `data/channels.json` | Persistent channel list | ✅ Runtime |
+| `data/channels.default.json` | Default preset channel list | ✅ Committed |
+| `data/channels.json` | Runtime channel list (overrides defaults) | ✅ Runtime |
 | `.kilocode/` | AI context & recipes | ✅ Ready |
 
 ## How It Works
 
 1. **Videos Tab**: Displays recent videos from all tracked channels. Shows videos from the last 7 days, or the last 3 videos if fewer than 3 were posted in that period. Supports sorting by date or channel name.
-2. **Manage Channels Tab**: Add/remove YouTube channel handles (e.g. `@NetworkChuck`). Stored persistently in `data/channels.json`.
+2. **Manage Channels Tab**: Add/remove YouTube channel handles (e.g. `@NetworkChuck`). Stored persistently in `data/channels.json`. Falls back to `data/channels.default.json` presets when no runtime data exists.
 3. **Video Fetching**: Server-side API resolves channel handle to channel ID by fetching the YouTube page, then retrieves the RSS feed at `https://www.youtube.com/feeds/videos.xml?channel_id=...`.
 
 ## Session History
@@ -45,3 +50,4 @@ The application is a YouTube tracker dashboard that monitors recent videos from 
 |------|---------|
 | Initial | Template created with base setup |
 | 2026-03-31 | Added YouTube Tracker Dashboard with channel management, video fetching via RSS, sorting, and persistent channel list |
+| 2026-03-31 | Fixed client-side exception (try/catch in useEffect), added error.tsx boundary, added preset channels via channels.default.json |
