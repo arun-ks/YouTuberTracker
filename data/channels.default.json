@@ -1,5 +1,12 @@
-[
-  "@mkbhd",
-  "@LinusTechTips",
-  "@firaborz"
-]
+{
+  "groups": [
+    {
+      "name": "Tech",
+      "channels": ["@mkbhd", "@LinusTechTips"]
+    },
+    {
+      "name": "Other",
+      "channels": ["@firaborz"]
+    }
+  ]
+}
