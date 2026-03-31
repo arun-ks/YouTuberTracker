@@ -65,9 +65,9 @@ export async function POST(request: Request) {
           { status: 400 }
         );
       }
-      if (data.groups.length >= 5) {
+      if (data.groups.length >= 20) {
         return NextResponse.json(
-          { error: "Maximum 5 groups allowed" },
+          { error: "Maximum 20 groups allowed" },
           { status: 400 }
         );
       }
