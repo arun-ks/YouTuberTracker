@@ -40,5 +40,6 @@ yarn-error.log*
 *.tsbuildinfo
 next-env.d.ts
 
-# app data
-/data
+# app data (keep default presets)
+/data/*
+!/data/channels.default.json

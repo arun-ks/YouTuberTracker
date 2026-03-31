@@ -4,6 +4,7 @@ import path from "path";
 
 const DATA_DIR = path.join(process.cwd(), "data");
 const CHANNELS_FILE = path.join(DATA_DIR, "channels.json");
+const DEFAULT_CHANNELS_FILE = path.join(DATA_DIR, "channels.default.json");
 
 async function ensureDataDir() {
   await mkdir(DATA_DIR, { recursive: true });
@@ -14,7 +15,12 @@ async function readChannels(): Promise<string[]> {
     const data = await readFile(CHANNELS_FILE, "utf-8");
     return JSON.parse(data);
   } catch {
-    return [];
+    try {
+      const defaultData = await readFile(DEFAULT_CHANNELS_FILE, "utf-8");
+      return JSON.parse(defaultData);
+    } catch {
+      return [];
+    }
   }
 }
 

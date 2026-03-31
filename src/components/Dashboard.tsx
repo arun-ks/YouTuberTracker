@@ -31,9 +31,13 @@ export default function Dashboard() {
   useEffect(() => {
     let cancelled = false;
     (async () => {
-      const res = await fetch("/api/channels");
-      const data = await res.json();
-      if (!cancelled) setChannels(data.channels);
+      try {
+        const res = await fetch("/api/channels");
+        const data = await res.json();
+        if (!cancelled) setChannels(data.channels ?? []);
+      } catch {
+        if (!cancelled) setChannels([]);
+      }
     })();
     return () => {
       cancelled = true;
