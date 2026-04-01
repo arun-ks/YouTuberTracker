@@ -41,10 +41,6 @@ export default function Dashboard() {
   const [newGroupName, setNewGroupName] = useState("");
   const [addGroupLoading, setAddGroupLoading] = useState(false);
 
-  // Inline rename state
-  const [renamingGroup, setRenamingGroup] = useState<string | null>(null);
-  const [renameValue, setRenameValue] = useState("");
-
   // Search state for manage tab
   const [groupSearch, setGroupSearch] = useState("");
 
@@ -166,49 +162,9 @@ export default function Dashboard() {
     setAddGroupLoading(false);
   };
 
-  const removeGroup = async (name: string) => {
-    await fetch("/api/channels", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ action: "remove-group", name }),
-    });
-    setSelectedGroups((prev) => {
-      const next = new Set(prev);
-      next.delete(name);
-      return next;
-    });
-    await refreshGroups();
-  };
 
-  const renameGroup = async (oldName: string) => {
-    if (!renameValue.trim()) return;
-    const res = await fetch("/api/channels", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({
-        action: "rename-group",
-        name: oldName,
-        newName: renameValue.trim(),
-      }),
-    });
-    const data = await res.json();
-    if (data.error) {
-      setError(data.error);
-    } else {
-      setGroups(data.groups ?? []);
-      setSelectedGroups((prev) => {
-        if (prev.has(oldName)) {
-          const next = new Set(prev);
-          next.delete(oldName);
-          next.add(renameValue.trim());
-          return next;
-        }
-        return prev;
-      });
-    }
-    setRenamingGroup(null);
-    setRenameValue("");
-  };
+
+
 
   const toggleGroupFilter = (name: string) => {
     setSelectedGroups((prev) => {
@@ -360,59 +316,12 @@ export default function Dashboard() {
                     className="bg-neutral-900 border border-neutral-800 rounded-lg overflow-hidden"
                   >
                     <div className="flex items-center justify-between px-4 py-3 border-b border-neutral-800">
-                      {renamingGroup === group.name ? (
-                        <div className="flex gap-2 flex-1">
-                          <input
-                            type="text"
-                            value={renameValue}
-                            onChange={(e) => setRenameValue(e.target.value)}
-                            onKeyDown={(e) => {
-                              if (e.key === "Enter") renameGroup(group.name);
-                              if (e.key === "Escape") setRenamingGroup(null);
-                            }}
-                            className="flex-1 bg-neutral-800 border border-neutral-600 rounded px-3 py-1 text-sm focus:outline-none focus:border-red-500"
-                            autoFocus
-                          />
-                          <button
-                            onClick={() => renameGroup(group.name)}
-                            className="text-xs text-red-400 hover:text-red-300"
-                          >
-                            Save
-                          </button>
-                          <button
-                            onClick={() => setRenamingGroup(null)}
-                            className="text-xs text-neutral-500 hover:text-neutral-300"
-                          >
-                            Cancel
-                          </button>
-                        </div>
-                      ) : (
-                        <>
-                          <h3 className="text-sm font-semibold text-neutral-200">
-                            {group.name}
-                            <span className="text-neutral-600 font-normal ml-2">
-                              ({group.channels.length})
-                            </span>
-                          </h3>
-                          <div className="flex gap-3">
-                            <button
-                              onClick={() => {
-                                setRenamingGroup(group.name);
-                                setRenameValue(group.name);
-                              }}
-                              className="text-xs text-neutral-500 hover:text-neutral-300 transition-colors"
-                            >
-                              Rename
-                            </button>
-                            <button
-                              onClick={() => removeGroup(group.name)}
-                              className="text-xs text-neutral-500 hover:text-red-400 transition-colors"
-                            >
-                              Delete Group
-                            </button>
-                          </div>
-                        </>
-                      )}
+                      <h3 className="text-sm font-semibold text-neutral-200">
+                        {group.name}
+                        <span className="text-neutral-600 font-normal ml-2">
+                          ({group.channels.length})
+                        </span>
+                      </h3>
                     </div>
 
                     {/* Add channel to this group */}
@@ -581,39 +490,52 @@ export default function Dashboard() {
 
             <div className="grid gap-4">
               {sortedVideos.map((video) => (
-                <a
+                <div
                   key={video.id}
-                  href={video.url}
-                  target="_blank"
-                  rel="noopener noreferrer"
                   className="flex gap-4 bg-neutral-900 border border-neutral-800 rounded-lg overflow-hidden hover:border-neutral-600 transition-colors group"
                 >
-                  <div className="relative w-64 h-36 flex-shrink-0 bg-neutral-800">
-                    <Image
-                      src={video.thumbnail}
-                      alt={video.title}
-                      fill
-                      className="object-cover"
-                      sizes="256px"
-                    />
+                  <a
+                    href={video.url}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="flex gap-4 flex-1"
+                  >
+                    <div className="relative w-64 h-36 flex-shrink-0 bg-neutral-800">
+                      <Image
+                        src={video.thumbnail}
+                        alt={video.title}
+                        fill
+                        className="object-cover"
+                        sizes="256px"
+                      />
+                    </div>
+                    <div className="flex flex-col justify-center py-3 pr-2 min-w-0 flex-1">
+                      <h3 className="text-sm font-semibold text-neutral-100 group-hover:text-red-400 transition-colors line-clamp-2">
+                        {video.title}
+                      </h3>
+                      <p className="text-xs text-neutral-500 mt-2">
+                        {video.channelName}
+                      </p>
+                      <p className="text-xs text-neutral-600 mt-1">
+                        {formatDate(video.published)}
+                      </p>
+                      {handleToGroup.has(video.channelHandle) && (
+                        <span className="text-xs text-neutral-700 mt-1">
+                          {handleToGroup.get(video.channelHandle)}
+                        </span>
+                      )}
+                    </div>
+                  </a>
+                  <div className="flex flex-col justify-center pr-4">
+                    <button
+                      onClick={() => window.open(`${video.url}&action=watchlater`, '_blank')}
+                      className="text-xs text-neutral-500 hover:text-red-400 transition-colors p-1"
+                      title="Add to Watch Later"
+                    >
+                      📺
+                    </button>
                   </div>
-                  <div className="flex flex-col justify-center py-3 pr-4 min-w-0">
-                    <h3 className="text-sm font-semibold text-neutral-100 group-hover:text-red-400 transition-colors line-clamp-2">
-                      {video.title}
-                    </h3>
-                    <p className="text-xs text-neutral-500 mt-2">
-                      {video.channelName}
-                    </p>
-                    <p className="text-xs text-neutral-600 mt-1">
-                      {formatDate(video.published)}
-                    </p>
-                    {handleToGroup.has(video.channelHandle) && (
-                      <span className="text-xs text-neutral-700 mt-1">
-                        {handleToGroup.get(video.channelHandle)}
-                      </span>
-                    )}
-                  </div>
-                </a>
+                </div>
               ))}
             </div>
           </div>
