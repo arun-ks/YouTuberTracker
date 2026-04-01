@@ -31,6 +31,7 @@ export default function Dashboard() {
   const [sortField, setSortField] = useState<SortField>("date");
   const [sortDir, setSortDir] = useState<SortDir>("desc");
   const [selectedGroups, setSelectedGroups] = useState<Set<string>>(new Set());
+  const [cleared, setCleared] = useState(false);
   const fetchedRef = useRef(false);
 
 
@@ -117,6 +118,7 @@ export default function Dashboard() {
 
 
   const toggleGroupFilter = (name: string) => {
+    setCleared(false);
     setSelectedGroups((prev) => {
       const next = new Set(prev);
       if (next.has(name)) {
@@ -128,6 +130,11 @@ export default function Dashboard() {
     });
   };
 
+  const clearFilters = () => {
+    setCleared(true);
+    setSelectedGroups(new Set());
+  };
+
   // Build handle -> group name map for filtering
   const handleToGroup = new Map<string, string>();
   for (const g of groups) {
@@ -137,16 +144,20 @@ export default function Dashboard() {
   }
 
   const filteredHandles =
-    selectedGroups.size === 0
-      ? allHandles
-      : allHandles.filter((h) => selectedGroups.has(handleToGroup.get(h) ?? ""));
+    cleared && selectedGroups.size === 0
+      ? []
+      : selectedGroups.size === 0
+        ? allHandles
+        : allHandles.filter((h) => selectedGroups.has(handleToGroup.get(h) ?? ""));
 
   const filteredVideos =
-    selectedGroups.size === 0
-      ? videos
-      : videos.filter((v) =>
-          selectedGroups.has(handleToGroup.get(v.channelHandle) ?? "")
-        );
+    cleared && selectedGroups.size === 0
+      ? []
+      : selectedGroups.size === 0
+        ? videos
+        : videos.filter((v) =>
+            selectedGroups.has(handleToGroup.get(v.channelHandle) ?? "")
+          );
 
   const sortedVideos = [...filteredVideos].sort((a, b) => {
     if (sortField === "date") {
@@ -334,9 +345,15 @@ export default function Dashboard() {
                   (sortDir === "desc" ? "\u2193" : "\u2191")}
               </button>
               <button
+                onClick={clearFilters}
+                className="ml-auto text-sm px-3 py-1.5 rounded-md text-neutral-400 hover:text-neutral-200 border border-neutral-800 transition-colors"
+              >
+                Clear
+              </button>
+              <button
                 onClick={() => fetchAllVideos(filteredHandles)}
                 disabled={loading || filteredHandles.length === 0}
-                className="ml-auto text-sm px-3 py-1.5 rounded-md text-neutral-400 hover:text-neutral-200 border border-neutral-800 transition-colors disabled:opacity-50"
+                className="text-sm px-3 py-1.5 rounded-md text-neutral-400 hover:text-neutral-200 border border-neutral-800 transition-colors disabled:opacity-50"
               >
                 {loading ? "Refreshing..." : "Refresh"}
               </button>
