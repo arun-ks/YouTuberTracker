@@ -8,6 +8,7 @@ interface Video {
   channelHandle: string;
   channelName: string;
   url: string;
+  duration?: string;
 }
 
 async function resolveChannelId(handle: string): Promise<string | null> {
@@ -39,6 +40,43 @@ async function resolveChannelId(handle: string): Promise<string | null> {
   } catch {
     return null;
   }
+}
+
+async function fetchVideoDuration(videoId: string): Promise<string | undefined> {
+  try {
+    const oembedUrl = `https://www.youtube.com/oembed?url=https://www.youtube.com/watch?v=${videoId}&format=json`;
+    const res = await fetch(oembedUrl);
+    if (!res.ok) return undefined;
+
+    const data = await res.json();
+    // YouTube oEmbed doesn't include duration, so we'll need to parse from HTML
+    const videoUrl = `https://www.youtube.com/watch?v=${videoId}`;
+    const htmlRes = await fetch(videoUrl, {
+      headers: {
+        "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36",
+      },
+    });
+    const html = await htmlRes.text();
+
+    // Look for duration in the HTML (approximateSeconds format)
+    const durationMatch = html.match(/"approxDurationMs":"(\d+)"/);
+    if (durationMatch) {
+      const durationMs = parseInt(durationMatch[1]);
+      const seconds = Math.floor(durationMs / 1000);
+      const hours = Math.floor(seconds / 3600);
+      const minutes = Math.floor((seconds % 3600) / 60);
+      const secs = seconds % 60;
+
+      if (hours > 0) {
+        return `${hours}:${minutes.toString().padStart(2, '0')}:${secs.toString().padStart(2, '0')}`;
+      } else {
+        return `${minutes}:${secs.toString().padStart(2, '0')}`;
+      }
+    }
+  } catch {
+    // Ignore errors and return undefined
+  }
+  return undefined;
 }
 
 async function fetchRssFeed(
@@ -92,7 +130,18 @@ async function fetchRssFeed(
     };
   });
 
-  return { videos, channelName };
+  // Fetch durations for videos (limit to first 10 to avoid rate limiting)
+  const videosWithDuration = await Promise.all(
+    videos.slice(0, 10).map(async (video) => {
+      const duration = await fetchVideoDuration(video.id);
+      return { ...video, duration };
+    })
+  );
+
+  // For videos beyond the first 10, return without duration
+  const remainingVideos = videos.slice(10).map(video => ({ ...video }));
+
+  return { videos: [...videosWithDuration, ...remainingVideos], channelName };
 }
 
 export async function GET(request: Request) {

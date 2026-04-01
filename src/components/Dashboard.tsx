@@ -11,6 +11,7 @@ interface Video {
   channelHandle: string;
   channelName: string;
   url: string;
+  duration?: string;
 }
 
 interface ChannelGroup {
@@ -32,14 +33,7 @@ export default function Dashboard() {
   const [selectedGroups, setSelectedGroups] = useState<Set<string>>(new Set());
   const fetchedRef = useRef(false);
 
-  // New channel input state
-  const [newHandle, setNewHandle] = useState("");
-  const [targetGroup, setTargetGroup] = useState("");
-  const [addLoading, setAddLoading] = useState(false);
 
-  // New group input state
-  const [newGroupName, setNewGroupName] = useState("");
-  const [addGroupLoading, setAddGroupLoading] = useState(false);
 
   // Search state for manage tab
   const [groupSearch, setGroupSearch] = useState("");
@@ -56,9 +50,7 @@ export default function Dashboard() {
           const loadedGroups = data.groups ?? [];
           setGroups(loadedGroups);
           setSelectedGroups(new Set(loadedGroups.map((g: ChannelGroup) => g.name)));
-          if (loadedGroups.length > 0) {
-            setTargetGroup(loadedGroups[0].name);
-          }
+
         }
       } catch {
         if (!cancelled) setGroups([]);
@@ -118,49 +110,7 @@ export default function Dashboard() {
     setGroups(data.groups ?? []);
   };
 
-  const addChannel = async () => {
-    if (!newHandle.trim() || !targetGroup) return;
-    setAddLoading(true);
-    await fetch("/api/channels", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({
-        action: "add-channel",
-        handle: newHandle.trim(),
-        group: targetGroup,
-      }),
-    });
-    await refreshGroups();
-    setNewHandle("");
-    setAddLoading(false);
-  };
 
-  const removeChannel = async (handle: string) => {
-    await fetch("/api/channels", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ action: "remove-channel", handle }),
-    });
-    await refreshGroups();
-  };
-
-  const addGroup = async () => {
-    if (!newGroupName.trim()) return;
-    setAddGroupLoading(true);
-    const res = await fetch("/api/channels", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ action: "add-group", name: newGroupName.trim() }),
-    });
-    const data = await res.json();
-    if (data.error) {
-      setError(data.error);
-    } else {
-      setGroups(data.groups ?? []);
-    }
-    setNewGroupName("");
-    setAddGroupLoading(false);
-  };
 
 
 
@@ -261,30 +211,6 @@ export default function Dashboard() {
       <main className="max-w-6xl mx-auto px-6 py-6">
         {activeTab === "manage" && (
           <div className="space-y-6">
-            {/* Add group row */}
-            <div className="flex gap-3">
-              <input
-                type="text"
-                value={newGroupName}
-                onChange={(e) => setNewGroupName(e.target.value)}
-                onKeyDown={(e) => e.key === "Enter" && addGroup()}
-                placeholder="New group name"
-                className="flex-1 bg-neutral-900 border border-neutral-700 rounded-lg px-4 py-2.5 text-sm focus:outline-none focus:border-red-500 transition-colors"
-              />
-              <button
-                onClick={addGroup}
-                disabled={
-                  addGroupLoading || !newGroupName.trim() || groups.length >= 5
-                }
-                className="bg-neutral-700 hover:bg-neutral-600 disabled:bg-neutral-800 disabled:text-neutral-600 text-white px-5 py-2.5 rounded-lg text-sm font-medium transition-colors"
-              >
-                {addGroupLoading ? "Adding..." : "Add Group"}
-              </button>
-            </div>
-            {groups.length >= 5 && (
-              <p className="text-xs text-neutral-600">Maximum 5 groups reached</p>
-            )}
-
             {/* Search */}
             <div className="flex gap-3">
               <input
@@ -324,39 +250,6 @@ export default function Dashboard() {
                       </h3>
                     </div>
 
-                    {/* Add channel to this group */}
-                    <div className="flex gap-2 px-4 py-2 border-b border-neutral-800">
-                      <input
-                        type="text"
-                        value={targetGroup === group.name ? newHandle : ""}
-                        onChange={(e) => {
-                          setTargetGroup(group.name);
-                          setNewHandle(e.target.value);
-                        }}
-                        onKeyDown={(e) => {
-                          if (e.key === "Enter") {
-                            setTargetGroup(group.name);
-                            addChannel();
-                          }
-                        }}
-                        placeholder="@ChannelHandle"
-                        className="flex-1 bg-neutral-800 border border-neutral-700 rounded px-3 py-1.5 text-sm focus:outline-none focus:border-red-500 transition-colors"
-                      />
-                      <button
-                        onClick={() => {
-                          setTargetGroup(group.name);
-                          addChannel();
-                        }}
-                        disabled={
-                          addLoading ||
-                          !(targetGroup === group.name && newHandle.trim())
-                        }
-                        className="bg-red-600 hover:bg-red-500 disabled:bg-neutral-700 disabled:text-neutral-600 text-white px-4 py-1.5 rounded text-sm font-medium transition-colors"
-                      >
-                        {addLoading ? "..." : "Add"}
-                      </button>
-                    </div>
-
                     {/* Channel list */}
                     {group.channels.length === 0 ? (
                       <p className="text-neutral-600 text-xs px-4 py-3">
@@ -367,7 +260,7 @@ export default function Dashboard() {
                         {group.channels.map((ch) => (
                           <li
                             key={ch}
-                            className="flex items-center justify-between px-4 py-2 hover:bg-neutral-800/50 transition-colors"
+                            className="px-4 py-2 hover:bg-neutral-800/50 transition-colors"
                           >
                             <a
                               href={`https://www.youtube.com/${ch}`}
@@ -377,12 +270,6 @@ export default function Dashboard() {
                             >
                               {ch}
                             </a>
-                            <button
-                              onClick={() => removeChannel(ch)}
-                              className="text-xs text-neutral-600 hover:text-red-400 transition-colors"
-                            >
-                              Remove
-                            </button>
                           </li>
                         ))}
                       </ul>
@@ -518,6 +405,9 @@ export default function Dashboard() {
                       </p>
                       <p className="text-xs text-neutral-600 mt-1">
                         {formatDate(video.published)}
+                        {video.duration && (
+                          <span className="ml-2 text-neutral-500">• {video.duration}</span>
+                        )}
                       </p>
                       {handleToGroup.has(video.channelHandle) && (
                         <span className="text-xs text-neutral-700 mt-1">
