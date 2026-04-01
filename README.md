@@ -1,121 +1,91 @@
 # YouTube Tracker
 
-A modern web application to track recent videos from your favorite YouTube creators, organized by custom groups. Built with Next.js 16, TypeScript, and Tailwind CSS.
+A web application to track recent videos from your favorite YouTube creators, organized by custom groups. Built with Next.js 16, TypeScript, and Tailwind CSS.
 
 ## Features
 
-### 📺 Video Tracking
+### Video Tracking
 - **Recent Videos**: Displays videos from the last 7 days, or the latest 3 videos if fewer recent ones exist
 - **Group Filtering**: Filter videos by custom channel groups using checkboxes
 - **Sorting Options**: Sort by date (newest/oldest) or channel name
-- **Video Duration**: Shows video length in HH:MM:SS or MM:SS format
-- **Watch Later**: One-click button to add videos to YouTube's Watch Later playlist
+- **Video Duration**: Shows video length in HH:MM:SS or MM:SS format (fetched from YouTube embed pages)
+- **Watch Later**: One-click button to open a video on YouTube (adds to Watch Later via YouTube's built-in flow)
 
-### 👥 Channel Management
-- **Custom Groups**: Organize channels into up to 20 groups
-- **Persistent Storage**: Channel data persists across deployments using Turso (SQLite)
-- **Search Functionality**: Search through groups and channels in the manage tab
+### Channel Management
+- **Custom Groups**: Organize channels into groups (defined in `data/channels.default.json`)
+- **Search**: Search through groups and channels in the Channels & Groups tab
+- **Persistent Storage**: Channel list is stored in `data/channels.default.json` and committed to git
 
 ## Tech Stack
 
-- **Frontend**: Next.js 16, React 19, TypeScript, Tailwind CSS
-- **Backend**: Next.js API Routes
-- **Database**: Turso (SQLite with edge replication)
+- **Framework**: Next.js 16 (App Router)
+- **Language**: TypeScript
+- **Styling**: Tailwind CSS 4 (dark theme)
+- **Data**: YouTube RSS feeds (no API key required)
 - **Deployment**: Vercel
-- **Styling**: Tailwind CSS with dark theme
 
 ## Getting Started
 
 ### Prerequisites
-- Node.js 18+
-- A [Turso](https://turso.tech) account for database storage
+- Node.js 18+ or Bun
 
 ### Installation
 
-1. **Clone the repository**
-   ```bash
-   git clone https://github.com/your-username/youtube-tracker.git
-   cd youtube-tracker
-   ```
+```bash
+git clone https://github.com/arun-ks/YouTuberTracker.git
+cd YouTuberTracker
+bun install
+```
 
-2. **Install dependencies**
-   ```bash
-   npm install
-   # or
-   bun install
-   ```
+### Run Locally
 
-3. **Set up Turso Database**
-   - Create a Turso database: `turso db create youtube-tracker`
-   - Get your database URL and auth token
-   - Add environment variables to `.env.local`:
-     ```
-     TURSO_DATABASE_URL=your-database-url
-     TURSO_AUTH_TOKEN=your-auth-token
-     ```
+```bash
+bun run dev
+```
 
-4. **Run the development server**
-   ```bash
-   npm run dev
-   # or
-   bun run dev
-   ```
+Open [http://localhost:3000](http://localhost:3000).
 
-5. **Open [http://localhost:3000](http://localhost:3000)**
+### Deploy to Vercel
 
-### Deployment
-
-1. **Deploy to Vercel**
-   - Connect your GitHub repository to Vercel
-   - Add the Turso environment variables in Vercel's dashboard
-   - Deploy!
-
-2. **Database Setup**
-   - The app will automatically create the necessary tables on first run
-   - Default channel groups are loaded from `data/channels.default.json`
+1. Push your repo to GitHub
+2. Import the project in [Vercel](https://vercel.com)
+3. Deploy — no environment variables needed
 
 ## Project Structure
 
 ```
+├── data/
+│   └── channels.default.json   # Channel groups (committed to git)
 ├── src/
 │   ├── app/
 │   │   ├── api/
 │   │   │   ├── channels/
-│   │   │   │   ├── route.ts     # Channel management API
-│   │   │   │   └── store.ts     # Database abstraction
+│   │   │   │   ├── route.ts    # Channel groups CRUD API
+│   │   │   │   └── store.ts    # File-based storage
 │   │   │   └── youtube/
-│   │   │       └── route.ts     # YouTube RSS feed API
-│   │   ├── error.tsx            # Error boundary
-│   │   ├── globals.css          # Global styles
-│   │   ├── layout.tsx           # Root layout
-│   │   └── page.tsx             # Home page
+│   │   │       └── route.ts    # YouTube video fetch API
+│   │   ├── error.tsx           # Error boundary
+│   │   ├── globals.css         # Global styles
+│   │   ├── layout.tsx          # Root layout
+│   │   └── page.tsx            # Home page
 │   └── components/
-│       └── Dashboard.tsx        # Main dashboard component
-├── data/
-│   └── channels.default.json    # Default channel configuration
-├── next.config.ts               # Next.js configuration
-└── tailwind.config.ts          # Tailwind CSS configuration
+│       └── Dashboard.tsx       # Main dashboard component
+├── next.config.ts              # Image remote patterns config
+└── README.md
 ```
 
-## API Endpoints
+## How It Works
 
-### `/api/channels`
-- **GET**: Retrieve all channel groups
-- **POST**: Manage channel groups
-  - `add-channel`: Add a channel to a group
-  - `remove-channel`: Remove a channel from all groups
-  - `add-group`: Create a new group
-  - `remove-group`: Delete a group
-  - `rename-group`: Rename a group
-
-### `/api/youtube?handle=@ChannelHandle`
-- **GET**: Fetch recent videos for a channel
-- Returns: Channel info and up to 10 recent videos with duration
+1. **Channel Groups**: Defined in `data/channels.default.json`. Edit this file to add/remove channels or groups.
+2. **Video Fetching**: The API resolves each channel handle to a YouTube channel ID, then fetches the RSS feed at `https://www.youtube.com/feeds/videos.xml?channel_id=...`.
+3. **Duration**: Fetched by scraping YouTube's embed page (`youtube.com/embed/{id}`) — no API key needed.
+4. **Watch Later**: Opens `youtube.com/watch?v={id}&action=watchlater` in a new tab.
 
 ## Configuration
 
 ### Channel Groups
-Edit `data/channels.default.json` to customize default channel groups:
+
+Edit `data/channels.default.json`:
 
 ```json
 {
@@ -123,38 +93,25 @@ Edit `data/channels.default.json` to customize default channel groups:
     {
       "name": "Tech",
       "channels": ["@mkbhd", "@LinusTechTips"]
+    },
+    {
+      "name": "Science",
+      "channels": ["@Vsauce", "@kurzgesagt"]
     }
   ]
 }
 ```
 
-### Environment Variables
-- `TURSO_DATABASE_URL`: Your Turso database URL
-- `TURSO_AUTH_TOKEN`: Your Turso authentication token
+### Image Domains
 
-## How It Works
+Thumbnail domains are configured in `next.config.ts` under `images.remotePatterns`.
 
-1. **Data Storage**: Channel groups are stored in Turso (SQLite) for persistence
-2. **Video Fetching**: Uses YouTube's free RSS feeds (no API key required)
-3. **Duration Parsing**: Scrapes video duration from YouTube pages
-4. **Watch Later**: Uses YouTube's built-in `&action=watchlater` URL parameter
+## Scripts
 
-## Contributing
-
-1. Fork the repository
-2. Create a feature branch: `git checkout -b feature-name`
-3. Make your changes
-4. Run tests: `npm run typecheck && npm run lint`
-5. Commit your changes: `git commit -am 'Add feature'`
-6. Push to the branch: `git push origin feature-name`
-7. Submit a pull request
-
-## License
-
-This project is open source and available under the [MIT License](LICENSE).
-
-## Acknowledgments
-
-- YouTube for providing RSS feeds
-- Turso for the excellent SQLite platform
-- Vercel for seamless deployment
+```bash
+bun run dev        # Start development server
+bun run build      # Production build
+bun run start      # Start production server
+bun run lint       # Run ESLint
+bun run typecheck  # Run TypeScript compiler
+```

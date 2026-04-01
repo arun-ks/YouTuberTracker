@@ -42,39 +42,58 @@ async function resolveChannelId(handle: string): Promise<string | null> {
   }
 }
 
+function formatDuration(totalSeconds: number): string {
+  const hours = Math.floor(totalSeconds / 3600);
+  const minutes = Math.floor((totalSeconds % 3600) / 60);
+  const seconds = totalSeconds % 60;
+  if (hours > 0) {
+    return `${hours}:${minutes.toString().padStart(2, "0")}:${seconds.toString().padStart(2, "0")}`;
+  }
+  return `${minutes}:${seconds.toString().padStart(2, "0")}`;
+}
+
 async function fetchVideoDuration(videoId: string): Promise<string | undefined> {
   try {
-    const oembedUrl = `https://www.youtube.com/oembed?url=https://www.youtube.com/watch?v=${videoId}&format=json`;
-    const res = await fetch(oembedUrl);
-    if (!res.ok) return undefined;
-
-    const data = await res.json();
-    // YouTube oEmbed doesn't include duration, so we'll need to parse from HTML
-    const videoUrl = `https://www.youtube.com/watch?v=${videoId}`;
-    const htmlRes = await fetch(videoUrl, {
+    const embedUrl = `https://www.youtube.com/embed/${videoId}`;
+    const res = await fetch(embedUrl, {
       headers: {
-        "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36",
+        "User-Agent":
+          "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36",
+        "Accept-Language": "en-US,en;q=0.9",
       },
     });
-    const html = await htmlRes.text();
+    if (!res.ok) return undefined;
+    const html = await res.text();
 
-    // Look for duration in the HTML (approximateSeconds format)
-    const durationMatch = html.match(/"approxDurationMs":"(\d+)"/);
-    if (durationMatch) {
-      const durationMs = parseInt(durationMatch[1]);
-      const seconds = Math.floor(durationMs / 1000);
-      const hours = Math.floor(seconds / 3600);
-      const minutes = Math.floor((seconds % 3600) / 60);
-      const secs = seconds % 60;
+    // Try approxDurationMs first
+    let match = html.match(/"approxDurationMs":"(\d+)"/);
+    if (match) {
+      return formatDuration(Math.floor(parseInt(match[1]) / 1000));
+    }
 
-      if (hours > 0) {
-        return `${hours}:${minutes.toString().padStart(2, '0')}:${secs.toString().padStart(2, '0')}`;
-      } else {
-        return `${minutes}:${secs.toString().padStart(2, '0')}`;
+    // Try lengthSeconds
+    match = html.match(/"lengthSeconds":"(\d+)"/);
+    if (match) {
+      return formatDuration(parseInt(match[1]));
+    }
+
+    // Try ISO 8601 duration (PT1H2M3S)
+    match = html.match(/"duration":"(PT[^"]+)"/);
+    if (match) {
+      const iso = match[1];
+      const hMatch = iso.match(/(\d+)H/);
+      const mMatch = iso.match(/(\d+)M/);
+      const sMatch = iso.match(/(\d+)S/);
+      const h = hMatch ? parseInt(hMatch[1]) : 0;
+      const m = mMatch ? parseInt(mMatch[1]) : 0;
+      const s = sMatch ? parseInt(sMatch[1]) : 0;
+      if (h > 0) {
+        return `${h}:${m.toString().padStart(2, "0")}:${s.toString().padStart(2, "0")}`;
       }
+      return `${m}:${s.toString().padStart(2, "0")}`;
     }
   } catch {
-    // Ignore errors and return undefined
+    // Silently ignore — duration is optional
   }
   return undefined;
 }
@@ -130,18 +149,16 @@ async function fetchRssFeed(
     };
   });
 
-  // Fetch durations for videos (limit to first 10 to avoid rate limiting)
-  const videosWithDuration = await Promise.all(
-    videos.slice(0, 10).map(async (video) => {
-      const duration = await fetchVideoDuration(video.id);
-      return { ...video, duration };
+  // Fetch durations concurrently (limit to first 5 to stay within timeout)
+  const toFetch = videos.slice(0, 5);
+  const rest = videos.slice(5);
+  const withDuration = await Promise.all(
+    toFetch.map(async (v) => {
+      const duration = await fetchVideoDuration(v.id);
+      return { ...v, duration };
     })
   );
-
-  // For videos beyond the first 10, return without duration
-  const remainingVideos = videos.slice(10).map(video => ({ ...video }));
-
-  return { videos: [...videosWithDuration, ...remainingVideos], channelName };
+  return { videos: [...withDuration, ...rest], channelName };
 }
 
 export async function GET(request: Request) {
