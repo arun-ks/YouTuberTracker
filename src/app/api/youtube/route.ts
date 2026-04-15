@@ -9,7 +9,6 @@ interface Video {
   channelName: string;
   url: string;
   duration?: string;
-  isShort?: boolean;
 }
 
 async function resolveChannelId(handle: string): Promise<string | null> {
@@ -157,14 +156,7 @@ async function fetchRssFeed(
   const withDuration = await Promise.all(
     toFetch.map(async (v) => {
       const duration = await fetchVideoDuration(v.id);
-      const durationSecs = duration
-        ? duration
-            .split(":")
-            .reduce((acc: number, t: string) => acc * 60 + parseInt(t), 0)
-        : 0;
-      // Shorts are under 3 minutes (180 seconds)
-      const isShort = durationSecs > 0 && durationSecs < 180;
-      return { ...v, duration, isShort };
+      return { ...v, duration };
     })
   );
   return { videos: [...withDuration, ...rest], channelName };

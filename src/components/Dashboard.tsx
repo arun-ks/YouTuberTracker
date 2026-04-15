@@ -12,7 +12,6 @@ interface Video {
   channelName: string;
   url: string;
   duration?: string;
-  isShort?: boolean;
 }
 
 interface ChannelGroup {
@@ -33,7 +32,6 @@ export default function Dashboard() {
   const [sortDir, setSortDir] = useState<SortDir>("desc");
   const [selectedGroups, setSelectedGroups] = useState<Set<string>>(new Set());
   const [cleared, setCleared] = useState(false);
-  const [hideShorts, setHideShorts] = useState(true);
   const [scrolled, setScrolled] = useState(false);
   const fetchedRef = useRef(false);
 
@@ -165,10 +163,10 @@ export default function Dashboard() {
     cleared && selectedGroups.size === 0
       ? []
       : selectedGroups.size === 0
-        ? videos.filter((v) => !(hideShorts && v.isShort))
+        ? videos
         : videos.filter((v) =>
             selectedGroups.has(handleToGroup.get(v.channelHandle) ?? "")
-          ).filter((v) => !(hideShorts && v.isShort));
+          );
 
   const sortedVideos = [...filteredVideos].sort((a, b) => {
     if (sortField === "date") {
@@ -331,21 +329,6 @@ export default function Dashboard() {
                   <span className="text-neutral-700">|</span>
                 </>
               )}
-              <label
-                className={`flex items-center gap-2 text-sm px-3 py-1.5 rounded-md cursor-pointer transition-colors ${
-                  hideShorts
-                    ? "bg-red-600/20 text-red-400 border border-red-600/30"
-                    : "text-neutral-400 hover:text-neutral-200 border border-neutral-800"
-                }`}
-              >
-                <input
-                  type="checkbox"
-                  checked={!hideShorts}
-                  onChange={() => setHideShorts(!hideShorts)}
-                  className="accent-red-500"
-                />
-                Shorts
-              </label>
               <span className="text-sm text-neutral-500">Sort:</span>
               <button
                 onClick={() => toggleSort("date")}
