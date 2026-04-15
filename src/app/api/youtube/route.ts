@@ -136,12 +136,10 @@ async function fetchRssFeed(
           .replace(/&quot;/g, '"')
           .replace(/&#39;/g, "'")
       : "Unknown Title";
-    const isShort = /shorts?/i.test(title);
 
     return {
       id: videoId,
       title,
-      isShort,
       published: publishedMatch ? publishedMatch[1] : "",
       thumbnail: thumbnailMatch
         ? thumbnailMatch[1]
@@ -164,7 +162,8 @@ async function fetchRssFeed(
             .split(":")
             .reduce((acc: number, t: string) => acc * 60 + parseInt(t), 0)
         : 0;
-      const isShort = durationSecs > 0 && durationSecs < 60 ? true : v.isShort;
+      // Shorts are under 3 minutes (180 seconds)
+      const isShort = durationSecs > 0 && durationSecs < 180;
       return { ...v, duration, isShort };
     })
   );
