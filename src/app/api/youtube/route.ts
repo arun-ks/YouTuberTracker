@@ -9,6 +9,7 @@ interface Video {
   channelName: string;
   url: string;
   duration?: string;
+  isShort?: boolean;
 }
 
 async function resolveChannelId(handle: string): Promise<string | null> {
@@ -135,10 +136,12 @@ async function fetchRssFeed(
           .replace(/&quot;/g, '"')
           .replace(/&#39;/g, "'")
       : "Unknown Title";
+    const isShort = /shorts?/i.test(title);
 
     return {
       id: videoId,
       title,
+      isShort,
       published: publishedMatch ? publishedMatch[1] : "",
       thumbnail: thumbnailMatch
         ? thumbnailMatch[1]

@@ -12,6 +12,7 @@ interface Video {
   channelName: string;
   url: string;
   duration?: string;
+  isShort?: boolean;
 }
 
 interface ChannelGroup {
@@ -32,6 +33,8 @@ export default function Dashboard() {
   const [sortDir, setSortDir] = useState<SortDir>("desc");
   const [selectedGroups, setSelectedGroups] = useState<Set<string>>(new Set());
   const [cleared, setCleared] = useState(false);
+  const [hideShorts, setHideShorts] = useState(true);
+  const [scrolled, setScrolled] = useState(false);
   const fetchedRef = useRef(false);
 
 
@@ -60,6 +63,14 @@ export default function Dashboard() {
     return () => {
       cancelled = true;
     };
+  }, []);
+
+  useEffect(() => {
+    const handleScroll = () => {
+      setScrolled(window.scrollY > 200);
+    };
+    window.addEventListener("scroll", handleScroll);
+    return () => window.removeEventListener("scroll", handleScroll);
   }, []);
 
   const fetchAllVideos = useCallback(async (handles: string[]) => {
@@ -154,10 +165,10 @@ export default function Dashboard() {
     cleared && selectedGroups.size === 0
       ? []
       : selectedGroups.size === 0
-        ? videos
+        ? videos.filter((v) => !(hideShorts && v.isShort))
         : videos.filter((v) =>
             selectedGroups.has(handleToGroup.get(v.channelHandle) ?? "")
-          );
+          ).filter((v) => !(hideShorts && v.isShort));
 
   const sortedVideos = [...filteredVideos].sort((a, b) => {
     if (sortField === "date") {
@@ -320,6 +331,21 @@ export default function Dashboard() {
                   <span className="text-neutral-700">|</span>
                 </>
               )}
+              <label
+                className={`flex items-center gap-2 text-sm px-3 py-1.5 rounded-md cursor-pointer transition-colors ${
+                  hideShorts
+                    ? "bg-red-600/20 text-red-400 border border-red-600/30"
+                    : "text-neutral-400 hover:text-neutral-200 border border-neutral-800"
+                }`}
+              >
+                <input
+                  type="checkbox"
+                  checked={!hideShorts}
+                  onChange={() => setHideShorts(!hideShorts)}
+                  className="accent-red-500"
+                />
+                Shorts
+              </label>
               <span className="text-sm text-neutral-500">Sort:</span>
               <button
                 onClick={() => toggleSort("date")}
@@ -448,6 +474,15 @@ export default function Dashboard() {
           </div>
         )}
       </main>
+      {scrolled && (
+        <button
+          onClick={() => window.scrollTo({ top: 0, behavior: "smooth" })}
+          className="fixed bottom-6 right-6 w-10 h-10 bg-neutral-800 hover:bg-neutral-700 text-neutral-400 hover:text-white rounded-full shadow-lg flex items-center justify-center transition-colors border border-neutral-700"
+          title="Back to top"
+        >
+          ↑
+        </button>
+      )}
     </div>
   );
 }
