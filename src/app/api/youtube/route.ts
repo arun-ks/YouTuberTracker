@@ -153,12 +153,19 @@ async function fetchRssFeed(
   });
 
   // Fetch durations concurrently (limit to first 5 to stay within timeout)
+  // If duration >= 60s, it's NOT a short (override title check)
   const toFetch = videos.slice(0, 5);
   const rest = videos.slice(5);
   const withDuration = await Promise.all(
     toFetch.map(async (v) => {
       const duration = await fetchVideoDuration(v.id);
-      return { ...v, duration };
+      const durationSecs = duration
+        ? duration
+            .split(":")
+            .reduce((acc: number, t: string) => acc * 60 + parseInt(t), 0)
+        : 0;
+      const isShort = durationSecs > 0 && durationSecs < 60 ? true : v.isShort;
+      return { ...v, duration, isShort };
     })
   );
   return { videos: [...withDuration, ...rest], channelName };
